@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # CPU版本服务
+  model-inference-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dl-models-cpu
+    ports:
+      - "5000:5000"
+    volumes:
+      # 挂载模型权重文件（避免重复复制大文件）
+      - ./weights:/app/weights
+      - ./uploads:/app/uploads
+      - ./results:/app/results
+      # 挂载配置文件
+      - ./class_indices.json:/app/class_indices.json
+      # 挂载各个模型的权重
+      - ./AlexNet_v2.pth:/app/AlexNet_v2.pth
+      - ./LeNet5_v2.pth:/app/LeNet5_v2.pth
+      - ./googleNet_v2.pth:/app/googleNet_v2.pth
+      - ./resNet34_v2.pth:/app/resNet34_v2.pth
+      - ./densenet121-a639ec97_v2.pth:/app/densenet121-a639ec97_v2.pth
+      - ./vgg16_transfer_best_v2.pth:/app/vgg16_transfer_best_v2.pth
+    environment:
+      - MODEL_PATH=/app/weights
+      - FLASK_ENV=production
+      - WORKERS=4
+    restart: unless-stopped
+    command: python app.py
+
+  # GPU版本服务（如果有GPU支持）
+  model-inference-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    container_name: dl-models-gpu
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./weights:/app/weights
+      - ./uploads:/app/uploads
+      - ./results:/app/results
+      - ./class_indices.json:/app/class_indices.json
+      - ./AlexNet_v2.pth:/app/AlexNet_v2.pth
+      - ./LeNet5_v2.pth:/app/LeNet5_v2.pth
+      - ./googleNet_v2.pth:/app/googleNet_v2.pth
+      - ./resNet34_v2.pth:/app/resNet34_v2.pth
+      - ./densenet121-a639ec97_v2.pth:/app/densenet121-a639ec97_v2.pth
+      - ./vgg16_transfer_best_v2.pth:/app/vgg16_transfer_best_v2.pth
+    environment:
+      - MODEL_PATH=/app/weights
+      - FLASK_ENV=production
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    profiles:
+      - gpu
+    command: python app.py
